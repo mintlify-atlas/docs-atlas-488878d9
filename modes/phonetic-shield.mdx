@@ -1,0 +1,136 @@
+---
+title: "Phonetic Shield"
+description: "Generate pronounceable, cryptographically secure passwords built from syllable groups with injected entropy characters — and a pronunciation guide so you can say them aloud."
+keywords: ["phonetic", "pronounceable", "syllable", "entropy", "memorable", "CSPRNG"]
+---
+
+Phonetic Shield is KeyForge's unique generator mode. It builds passwords from pronounceable syllable groups — onset consonant + vowel + optional coda — then weaves in high-entropy characters between each syllable. You get a password you can say aloud and commit to memory, yet one that resists dictionary, brute-force, and pattern-based attacks.
+
+Every character is still chosen by the browser's `crypto.getRandomValues()` CSPRNG. Pronounceability comes from the syllable structure, not from any reduction in randomness.
+
+## Syllable structure
+
+Each syllable follows the pattern: **onset + vowel + coda (67% chance)**
+
+```text
+[onset] + [vowel] + [coda?]
+
+e.g.  bl  +  ay  +  nd  =  blaYND
+      tr  +  oo  +  (none) =  trOO
+```
+
+### Onset consonants and blends (37 total)
+
+| Single consonants (17) | Blends (20) |
+|---|---|
+| b d f g h j k l m n p r s t v w z | bl br cl cr dr fl fr gl gr pl pr sl sm sn sp st sw tr wr sk sc |
+
+### Vowel options (10 total)
+
+| Vowel |
+|---|
+| a e i o u ay ee oo ai au |
+
+### Coda consonants and blends (22 total)
+
+| Single consonants (14) | Blends (8) |
+|---|---|
+| b d f g k l m n p r s t x z | nd nt st ck mp nk sk sp |
+
+The coda is added with a **67% probability** per syllable (`cryptoRand(3) > 0`), keeping passwords varied in length even at the same syllable count.
+
+## Settings reference
+
+<ParamField path="options.syllableCount" type="number" default="3">
+  Number of syllable groups. Range: 2–6. More syllables mean a longer, higher-entropy password.
+</ParamField>
+
+<ParamField path="options.entropyLevel" type="string" default="medium">
+  Controls what is injected between syllables and at the end. Options: `light`, `medium`, `heavy`.
+</ParamField>
+
+<ParamField path="options.capitalize" type="boolean" default="true">
+  Capitalise the first letter of each syllable for visual separation.
+</ParamField>
+
+## Entropy injection levels
+
+Entropy characters are inserted **between every pair of syllables** and **once at the very end** (for policy compliance). The total number of injection points is always `syllableCount` — one between each adjacent pair plus one at the end.
+
+| Level | Characters injected | Source pools |
+|---|---|---|
+| Light | 1 symbol | `!@#$%^&*_+-` (11 symbols) |
+| Medium | 1 symbol + 1 digit (order randomised) | 11 symbols + `23456789` (8 digits) |
+| Heavy | symbol + digit + symbol | 11 symbols + 8 digits |
+
+<Info>
+The digits `0` and `1` are excluded from injection to avoid confusion with the letters `O` and `l`. The injection digit pool is `23456789` (8 options).
+</Info>
+
+For medium level, the symbol and digit order is itself randomised per injection point — `symbol+digit` or `digit+symbol` with equal probability.
+
+## Pronunciation guide
+
+Every generated result includes a `guide` string alongside the `password`:
+
+```text
+password:  "Blaind#7Groo+Smek!"
+guide:     "BLAIND · GROO · SMEK"
+```
+
+The guide shows the raw syllables in uppercase, separated by ` · `, with all injected entropy characters stripped out. Enable **Show pronunciation guide** in the UI to see it displayed below the output field.
+
+This lets you read a complex password aloud without having to spell each character: say the syllable sounds, then enter the injected characters when needed.
+
+## Entropy calculation
+
+<Info>
+Phonetic entropy is estimated as: `syllableCount × log₂(sylSpace) + injections × injectedChars × log₂(symPool + digPool)`
+
+where `sylSpace = 39 × 10 × 17 + 39 × 10 ≈ 7020` (onset × vowel × coda variants including no-coda cases), `injections = syllableCount`, `symPool = 11`, `digPool = 8`.
+</Info>
+
+Approximate entropy by syllable count and injection level:
+
+| Syllables | Light (bits) | Medium (bits) | Heavy (bits) |
+|---|---|---|---|
+| 2 | ~43 | ~56 | ~69 |
+| 3 | ~65 | ~84 | ~104 |
+| 4 | ~87 | ~112 | ~138 |
+| 5 | ~108 | ~140 | ~173 |
+| 6 | ~130 | ~168 | ~207 |
+
+At 3 syllables with medium injection you reach ≈ 84 bits — **Very Strong** territory.
+
+## Example output
+
+```text
+# 3 syllables, medium, capitalize on
+password:  Blaind*4Greem+7Smekt!
+guide:     BLAIND · GREEM · SMEKT
+
+# 2 syllables, light, capitalize off
+password:  troot!drask!
+guide:     TROOT · DRASK
+
+# 4 syllables, heavy, capitalize on
+password:  Floot#3@Bren!7*Spail$6!Kroot@8#
+guide:     FLOOT · BREN · SPAIL · KROOT
+```
+
+## Use cases
+
+<Columns cols={2}>
+  <Card title="Shared credentials" icon="users">
+    Passwords for shared accounts that must be communicated verbally — you can dictate the syllables without spelling them out character by character.
+  </Card>
+  <Card title="Memorised master passwords" icon="brain">
+    Master passwords for password managers where you cannot paste from a vault. The syllable rhythm makes them easier to recall under stress.
+  </Card>
+  <Card title="Travel and offline use" icon="plane">
+    Credentials for devices you carry through checkpoints where you want to be able to reconstruct the password from memory alone.
+  </Card>
+  <Card title="Spoken security codes" icon="microphone">
+    Two-factor recovery codes or support verification phrases that need to be communicated over a phone call without misreading characters.
+  </Card>
+</Columns>

@@ -1,0 +1,137 @@
+---
+title: "FAQ"
+description: "Frequently asked questions about KeyForge security, features, and usage."
+---
+
+## Security
+
+<AccordionGroup>
+  <Accordion title="Is KeyForge truly secure?">
+    Yes. KeyForge uses `crypto.getRandomValues()` — the browser's Cryptographically Secure Pseudo-Random Number Generator (CSPRNG) — for every random decision. This is the same entropy source used by TLS and WebCrypto.
+
+    Characters are shuffled with the Fisher-Yates algorithm driven by that same CSPRNG, not by the statistically weak `Math.random()`. Anti-bruteforce guards then reject candidates that contain keyboard walks, sequential characters, or known weak fragments.
+
+    The result is a password that is both statistically random and structurally resistant to pattern-based attacks.
+  </Accordion>
+
+  <Accordion title="Can KeyForge see my passwords?">
+    No. KeyForge has no server, no database, and no network requests that carry your passwords. All generation happens inside your browser tab. Nothing is transmitted anywhere.
+
+    The only data written to storage is `localStorage['kf-theme']`, which stores your dark/light theme preference — never a password.
+  </Accordion>
+
+  <Accordion title="What does '100% local' mean?">
+    It means all code runs in your browser. After the initial page load, KeyForge requires no internet connection. The three JavaScript files (`pasgen.js`, `entropy.js`, `ui.js`) execute entirely on your device.
+
+    You can verify this by opening your browser's network inspector and confirming that no outgoing requests are made when you click Generate.
+  </Accordion>
+
+  <Accordion title="How is entropy calculated?">
+    For passwords, entropy is calculated as:
+
+    ```
+    H = length × log₂(poolSize)
+    ```
+
+    where `poolSize` is the number of characters in the effective pool after applying your character class and exclusion settings.
+
+    For passphrases: `H = wordCount × log₂(200) + log₂(90) [if number] + log₂(7) [if symbol]`
+
+    For PINs: `H = length × log₂(10)`
+
+    See [Password entropy](/concepts/entropy) for the full breakdown.
+  </Accordion>
+
+  <Accordion title="What are the strength tiers?">
+    KeyForge classifies passwords into six tiers based on entropy in bits:
+
+    | Tier | Entropy | Example |
+    |---|---|---|
+    | Very Weak | 0–35 bits | 4-digit PIN |
+    | Weak | 36–55 bits | 6-char lowercase |
+    | Fair | 56–72 bits | 10-char mixed |
+    | Strong | 73–94 bits | 12-char full charset |
+    | Very Strong | 95–127 bits | 16-char full charset |
+    | Fortress | 128+ bits | 20+ chars or long passphrase |
+  </Accordion>
+</AccordionGroup>
+
+## Features
+
+<AccordionGroup>
+  <Accordion title="What is Phonetic Shield?">
+    Phonetic Shield is a unique generator mode that builds passwords from pronounceable syllable groups (onset consonant + vowel + optional coda consonant), then injects high-entropy characters between them.
+
+    The result is a password you can say aloud and remember, yet it resists dictionary attacks (no real words), brute-force attacks (CSPRNG + entropy injection), and pattern-based attacks.
+
+    A pronunciation guide shows the syllable components in uppercase, separated by `·`, to help you memorize the password.
+
+    See [Phonetic Shield](/modes/phonetic-shield) for full details.
+  </Accordion>
+
+  <Accordion title="What does the entropy DNA visualization show?">
+    The entropy DNA bar shows the character-class composition of your generated password at a glance. Each character is represented as a colored cell:
+
+    | Color | Character class |
+    |---|---|
+    | Coral / orange | Uppercase letters |
+    | Silver / gray | Lowercase letters |
+    | Cyan / teal | Digits |
+    | Gold / yellow | Symbols |
+
+    A well-distributed bar with a mix of all four colors indicates a password that uses a diverse character pool — which maximizes entropy.
+  </Accordion>
+
+  <Accordion title="How does crack-time estimation work?">
+    KeyForge estimates how long it would take an offline attacker to crack your password by brute force. The baseline is **1 trillion (10¹²) guesses per second** — a realistic figure for a modern GPU farm attacking a raw MD5 or SHA hash.
+
+    The estimate assumes average-case cracking (half the keyspace):
+
+    ```
+    time = 2^(bits - 1) / 1,000,000,000,000 seconds
+    ```
+
+    If your credentials are stored with a strong hashing algorithm like bcrypt or Argon2 (which a well-designed system should use), the real crack times are orders of magnitude longer.
+  </Accordion>
+
+  <Accordion title="What keyboard shortcut regenerates a password?">
+    Press **Ctrl+Enter** (Windows/Linux) or **Cmd+Enter** (macOS) to regenerate a password for whichever tab is currently active. This works in all four modes.
+
+    You can also click the refresh icon (↻) next to the output field, or click the **Generate** button.
+  </Accordion>
+
+  <Accordion title="Does KeyForge work offline?">
+    Yes. Once the page has loaded, KeyForge requires no internet connection. All generation, entropy calculation, and UI logic runs locally.
+
+    You can also save the page as a local HTML file for fully air-gapped use. Open `index.html` directly in any modern browser — no server required.
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Why does generation sometimes take a moment?">
+    KeyForge generates candidate passwords in a loop and rejects any that fail the enabled anti-bruteforce guards. With strict settings (all guards on, short length), it may need many attempts before finding a valid candidate.
+
+    The maximum is **200 attempts**. If no valid candidate is found within 200 attempts, KeyForge falls back to generating a password without applying the guards, so you always get a result.
+  </Accordion>
+
+  <Accordion title="Why can't I enable all guards with a very short password?">
+    A very short password (e.g., 8 characters) with many guards enabled creates a difficult constraint satisfaction problem. Most candidates of that length will contain at least one keyboard walk, sequential run, or weak fragment by chance.
+
+    After 200 failed attempts, KeyForge falls back to unconstrained generation. If you want all guards enforced reliably, increase the password length to 12 or more characters.
+  </Accordion>
+
+  <Accordion title="My force-include characters don't appear — why?">
+    The **Force include** field (in Custom character sets) only guarantees characters that are already in the effective character pool. If a character is excluded by `excludeAmbiguous`, `customExclude`, or by having its character class disabled, it will be silently skipped.
+
+    To force-include a character:
+    1. Make sure its character class is enabled (lowercase, uppercase, digits, or symbols)
+    2. Make sure the character is not in the **Exclude characters** field
+    3. Make sure **Exclude ambiguous** is off if the character is in the ambiguous set (0, O, l, 1, I, etc.)
+  </Accordion>
+
+  <Accordion title="Why does the entropy DNA not appear for PINs?">
+    The entropy DNA visualization is only rendered for the Password, Passphrase, and Phonetic Shield modes — modes that produce multi-class output. PINs consist entirely of digits, so the color-class breakdown would show a single solid bar, which provides no useful information.
+  </Accordion>
+</AccordionGroup>

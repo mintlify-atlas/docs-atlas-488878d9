@@ -1,0 +1,166 @@
+---
+title: "Anti-bruteforce guards"
+description: "Learn how KeyForge's pattern-detection guards eliminate structurally weak passwords even when their raw entropy looks adequate."
+---
+
+Entropy measures how large a search space an attacker must explore, but it assumes the attacker must try passwords uniformly at random. Real attacks don't work that way. Attackers use optimized wordlists, rule-based mutations, and pattern heuristics to crack passwords that look long but follow predictable structures — keyboard walks, repeated characters, common words, or sequential digit runs.
+
+KeyForge addresses this with a set of **anti-bruteforce guards**: post-generation tests that reject candidate passwords containing detectable patterns. If a generated password fails any enabled guard, the engine discards it and tries again.
+
+## The generation loop
+
+Every call to `generatePassword` runs a retry loop of up to 200 attempts:
+
+```javascript
+const MAX_ATTEMPTS = 200;
+
+for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+  // ... build candidate password ...
+
+  // Apply anti-pattern guards
+  if (noRepeating    && hasConsecutiveRepeats(pwd)) continue;
+  if (noSequential   && hasKeyboardWalk(pwd))       continue;
+  if (noSequential   && hasSequentialChars(pwd))    continue;
+  if (noWeakFragment && hasWeakFragment(pwd))       continue;
+
+  return pwd;
+}
+
+// Fallback: skip strict checks after MAX_ATTEMPTS
+```
+
+If all 200 attempts fail — which can happen when several guards are active on a short password with a restricted character pool — the engine falls back to unconstrained generation so you always receive output.
+
+## Guards in detail
+
+<AccordionGroup>
+  <Accordion title="Exclude ambiguous characters">
+    **What it does:** Removes characters that look similar to other characters in common fonts, reducing transcription errors when you read or type a password.
+
+    The complete set of 11 excluded characters:
+
+    ```javascript
+    const AMBIGUOUS_CHARS = new Set(['0','O','o','l','1','I','|','`',"'",'"','\\']);
+    ```
+
+    These span four character classes: digit `0`, uppercase `O I`, lowercase `o l`, and symbols `| \` ' " `. When this option is on, each of these characters is filtered from its respective class before the pool is assembled, slightly reducing the effective pool size.
+
+    **Why it matters:** A password containing both `O` and `0`, or `l` and `1`, is error-prone when handwritten or spoken. Excluding ambiguous characters trades a small reduction in theoretical entropy for a meaningful improvement in practical usability.
+
+    **Default:** On.
+  </Accordion>
+
+  <Accordion title="Block keyboard walks">
+    **What it does:** Rejects passwords that contain three or more consecutive characters from a standard QWERTY keyboard row, in either direction.
+
+    The keyboard rows used for detection:
+
+    ```javascript
+    const KB_ROWS = [
+      'qwertyuiop',
+      'asdfghjkl',
+      'zxcvbnm',
+      '1234567890',
+    ];
+    ```
+
+    The detection logic:
+
+    ```javascript
+    function hasKeyboardWalk(str, seqLen = 3) {
+      const lower = str.toLowerCase();
+      for (const row of KB_ROWS) {
+        for (let i = 0; i <= lower.length - seqLen; i++) {
+          const sub = lower.slice(i, i + seqLen);
+          const idx = row.indexOf(sub);
+          if (idx !== -1) return true;
+          // Reverse walk
+          const rev = sub.split('').reverse().join('');
+          if (row.indexOf(rev) !== -1) return true;
+        }
+      }
+      return false;
+    }
+    ```
+
+    The check is case-insensitive — `QWE`, `qwe`, and `Qwe` are all detected as keyboard walks. Reverse walks (`poi`, `lkj`, `0987`) are also caught.
+
+    **Why it matters:** Sequences like `qwerty`, `asdf`, and `zxcv` appear in virtually every password cracking wordlist and rule set. Even embedded as a fragment inside a longer password, they significantly reduce the effective search space.
+
+    **Example walks blocked:** `qwe`, `asd`, `zxc`, `123`, `poi`, `lkj`, `098`.
+
+    **Default:** On.
+  </Accordion>
+
+  <Accordion title="No consecutive repeats">
+    **What it does:** Rejects any password where the same character appears twice in a row (case-sensitive comparison).
+
+    ```javascript
+    function hasConsecutiveRepeats(str) {
+      for (let i = 0; i < str.length - 1; i++) {
+        if (str[i] === str[i + 1]) return true;
+      }
+      return false;
+    }
+    ```
+
+    This catches `aa`, `11`, `!!`, and similar adjacent duplicates anywhere in the password.
+
+    Note that the broader `hasRepeatingChar` function (used internally) operates case-insensitively and detects runs of two or more identical characters. `hasConsecutiveRepeats` is the simpler case-sensitive check applied when the **No consecutive repeats** guard is enabled.
+
+    **Why it matters:** Adjacent repeated characters appear in common patterns (`aabbcc`, `112233`) and reduce the unpredictability of those positions. Blocking them eliminates an entire category of low-entropy substrings.
+
+    **Default:** Off. Enabling it can be useful for policies that forbid repeated characters, but it slightly reduces the effective pool since some combinations become unavailable.
+  </Accordion>
+
+  <Accordion title="Block weak fragments">
+    **What it does:** Rejects passwords that contain any entry from a curated set of common dictionary fragments and keyboard sequences as a substring (case-insensitive).
+
+    The full `WEAK_PATTERNS` set (34 entries):
+
+    ```javascript
+    const WEAK_PATTERNS = new Set([
+      'pass','word','admin','root','user','login','test','demo',
+      'temp','qwer','asdf','zxcv','1234','2345','3456','4567',
+      '5678','6789','abcd','aaaa','bbbb','cccc','dddd','eeee',
+      'hello','welco','secre','chang','defau','guest','name',
+      'email','birth','year','month','date','home','work','love',
+    ]);
+    ```
+
+    ```javascript
+    function hasWeakFragment(str) {
+      const lower = str.toLowerCase();
+      for (const frag of WEAK_PATTERNS) {
+        if (lower.includes(frag)) return true;
+      }
+      return false;
+    }
+    ```
+
+    The check lowercases the candidate before testing, so `Pass`, `ADMIN`, and `P@ss` (after leet reversal) are all matched if the literal pattern appears in the lowercased string.
+
+    **Why it matters:** Password cracking rules routinely test for fragments of common words embedded anywhere in a password. A 20-character password containing `admin` or `password` is far easier to crack than its entropy figure suggests, because those fragments are prioritized in attack wordlists.
+
+    **Default:** On.
+  </Accordion>
+</AccordionGroup>
+
+## Which guards are on by default
+
+| Guard | Default state |
+|---|---|
+| Exclude ambiguous characters | On |
+| Block keyboard walks | On |
+| No consecutive repeats | Off |
+| Block weak fragments | On |
+
+The defaults give you a strong practical baseline. Block keyboard walks and block weak fragments together eliminate the most common cracking shortcuts without significantly reducing the effective pool.
+
+<Warning>
+  Enabling more guards, particularly on short passwords with a small character pool, increases the chance that the engine exhausts all 200 attempts and falls back to unconstrained generation. If you see unexpected patterns in short passwords, try increasing the length or enabling more character classes.
+</Warning>
+
+<Tip>
+  For the best combination of security and reliability, keep **Block keyboard walks** and **Block weak fragments** on. Only enable **No consecutive repeats** if your organization's password policy specifically requires it — the entropy reduction is real, and the marginal security gain is small when the other guards are already active.
+</Tip>

@@ -1,0 +1,65 @@
+---
+title: "Privacy policy"
+description: "KeyForge privacy policy — zero data collection, no cookies, no telemetry. Last updated 2026."
+---
+
+<Note>
+  **Zero Data Policy.** KeyForge does not collect, process, or transmit any personal information. Every password you generate stays on your device and never leaves your browser.
+</Note>
+
+<AccordionGroup>
+  <Accordion title="1. No data collection">
+    All service functions run exclusively on your device using the browser's built-in `crypto.getRandomValues()` API. We do not collect, process, or store any personal information whatsoever.
+
+    No form submissions, no API calls, no analytics payloads — the app has no backend to send data to.
+  </Accordion>
+
+  <Accordion title="2. No cookies">
+    KeyForge operates with zero cookies. The only browser storage used is `localStorage` for your theme preference (dark/light).
+
+    <Info>
+      The single localStorage key written is `kf-theme`, which stores either `"dark"` or `"light"`. It contains no personal information and is never read by any server.
+    </Info>
+
+    No tracking cookies, no session cookies, no analytics cookies exist.
+  </Accordion>
+
+  <Accordion title="3. No telemetry">
+    No monitoring of user activity occurs. Zero information about your interactions is transmitted anywhere. Every password you generate stays in your browser only.
+
+    There are no analytics scripts, no error tracking SDKs, no performance monitoring tools, and no third-party scripts of any kind embedded in the app.
+  </Accordion>
+
+  <Accordion title="4. Fully client-side architecture">
+    KeyForge has no backend server. No requests are processed on remote servers. The app functions completely offline once the page has loaded. Your generated passwords never leave your device.
+
+    The entire application consists of three JavaScript files (`pasgen.js`, `entropy.js`, `ui.js`) and static HTML/CSS — all executed locally in your browser.
+  </Accordion>
+
+  <Accordion title="5. Cryptographic security">
+    All randomness is sourced from `crypto.getRandomValues()`, the browser's Cryptographically Secure Pseudo-Random Number Generator (CSPRNG). This is the same source used by TLS, WebCrypto, and other security-critical browser systems.
+
+    The generated output is shuffled using the Fisher-Yates algorithm driven by the same CSPRNG — not by `Math.random()`.
+  </Accordion>
+
+  <Accordion title="6. Policy updates">
+    We reserve the right to update this policy. All changes will be published on this page. The date of last update is shown at the bottom of the policy.
+
+    Last updated: **2026**
+  </Accordion>
+</AccordionGroup>
+
+## Summary
+
+| Data type | Collected | Stored | Transmitted |
+|---|---|---|---|
+| Generated passwords | No | No | No |
+| Settings / preferences | No | No | No |
+| Theme preference | No | `localStorage` (device only) | No |
+| Usage analytics | No | No | No |
+| Error logs | No | No | No |
+| IP address | No | No | No |
+
+<Tip>
+  For maximum privacy, you can save the KeyForge page as an HTML file and run it entirely offline — no internet connection is required for password generation.
+</Tip>

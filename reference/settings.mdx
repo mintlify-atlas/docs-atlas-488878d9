@@ -1,0 +1,179 @@
+---
+title: "Settings reference"
+description: "Complete reference for all KeyForge settings and configuration options across all four generator modes."
+---
+
+KeyForge exposes settings directly in the UI. This page documents every control, its default value, and what it does. There is nothing to configure in a config file — all settings are applied in real time as you interact with the sliders, checkboxes, and inputs.
+
+<Tabs>
+  <Tab title="Password">
+    ### Length
+
+    <ParamField path="length" type="integer" default="16">
+      Password length in characters. Range: 8–128. Increasing length is the single most effective way to raise entropy.
+    </ParamField>
+
+    ### Character classes
+
+    <ParamField path="useLower" type="boolean" default="true">
+      Include lowercase letters a–z in the character pool.
+    </ParamField>
+
+    <ParamField path="useUpper" type="boolean" default="true">
+      Include uppercase letters A–Z in the character pool.
+    </ParamField>
+
+    <ParamField path="useDigits" type="boolean" default="true">
+      Include digits 0–9 in the character pool.
+    </ParamField>
+
+    <ParamField path="useSymbols" type="boolean" default="true">
+      Include symbols from the symbol pool in the character pool.
+    </ParamField>
+
+    <ParamField path="symbolSet" type="string" default="!@#$%^&*()_+-=[]{}|;:,.<>?/~">
+      The pool of symbols to draw from when `useSymbols` is enabled. Edit this field to restrict or expand the symbol set to match your site's password policy.
+    </ParamField>
+
+    ### Anti-bruteforce guards
+
+    <ParamField path="excludeAmbiguous" type="boolean" default="true">
+      Removes visually ambiguous characters from the pool before generation: `0`, `O`, `o`, `l`, `1`, `I`, `|`, `` ` ``, `'`, `"`, `\`. Prevents copy-paste errors and read-back mistakes.
+    </ParamField>
+
+    <ParamField path="noSequential" type="boolean" default="true">
+      Rejects any candidate password that contains a keyboard walk (3+ consecutive characters in the same row of a QWERTY keyboard) or sequential ASCII characters (e.g., `abc`, `789`). Also checks reverse walks.
+    </ParamField>
+
+    <ParamField path="noRepeating" type="boolean" default="false">
+      Rejects any candidate password that contains two adjacent identical characters (e.g., `aa`, `11`). Off by default because it has a meaningful impact on pool diversity for shorter passwords.
+    </ParamField>
+
+    <ParamField path="noWeakFragment" type="boolean" default="true">
+      Rejects passwords that contain any substring from a list of 34 weak fragments (e.g., `pass`, `admin`, `qwer`, `1234`). Checked case-insensitively.
+    </ParamField>
+
+    ### Custom character sets
+
+    <ParamField path="customExclude" type="string" default="">
+      Characters to remove from the pool regardless of character class settings. Enter each character directly (e.g., `@ # &`). Useful for complying with sites that reject specific symbols.
+    </ParamField>
+
+    <ParamField path="customInclude" type="string" default="">
+      Characters to guarantee appear at least once in the generated password. Each character must already be present in the effective pool (after exclusions) — characters not in the pool are silently skipped.
+    </ParamField>
+
+    ### Minimum character counts
+
+    <ParamField path="minUpper" type="integer" default="1">
+      Minimum number of uppercase characters in the generated password. Range: 0–20. Requires `useUpper` to be enabled.
+    </ParamField>
+
+    <ParamField path="minLower" type="integer" default="1">
+      Minimum number of lowercase characters. Range: 0–20. Requires `useLower` to be enabled.
+    </ParamField>
+
+    <ParamField path="minDigits" type="integer" default="1">
+      Minimum number of digits. Range: 0–20. Requires `useDigits` to be enabled.
+    </ParamField>
+
+    <ParamField path="minSymbols" type="integer" default="1">
+      Minimum number of symbols. Range: 0–20. Requires `useSymbols` to be enabled.
+    </ParamField>
+
+    <Note>
+      The sum of all minimum counts must not exceed the target length. If it does, mandatory characters will fill the entire password and there will be no randomly-filled positions.
+    </Note>
+  </Tab>
+
+  <Tab title="Passphrase">
+    <ParamField path="wordCount" type="integer" default="5">
+      Number of words in the passphrase. Range: 3–10. Each word is drawn from a 200-word EFF-inspired wordlist, contributing approximately 7.6 bits of entropy per word.
+    </ParamField>
+
+    <ParamField path="separator" type="string" default="-">
+      Character inserted between words. Available options:
+      - `-` — Dash (default)
+      - `.` — Dot
+      - ` ` — Space
+      - `_` — Underscore
+      - `#` — Hash
+      - _(empty)_ — No separator
+    </ParamField>
+
+    <ParamField path="capitalize" type="boolean" default="true">
+      Capitalizes the first letter of each word (e.g., `apple` → `Apple`).
+    </ParamField>
+
+    <ParamField path="appendNum" type="boolean" default="true">
+      Appends a random 2-digit number (10–99) after the last word, adding approximately 6.5 bits of entropy.
+    </ParamField>
+
+    <ParamField path="appendSym" type="boolean" default="true">
+      Appends a random symbol drawn from `!@#$%&*` after everything else, adding approximately 2.8 bits of entropy.
+    </ParamField>
+
+    <ParamField path="useLeet" type="boolean" default="false">
+      Applies leet substitutions to word characters before output: `a`→`@`, `e`→`3`, `i`→`1`, `o`→`0`, `s`→`$`, `t`→`7`. Applied to both upper and lowercase variants.
+    </ParamField>
+  </Tab>
+
+  <Tab title="PIN">
+    <ParamField path="length" type="integer" default="6">
+      Number of digits in the PIN. Range: 4–20.
+    </ParamField>
+
+    <ParamField path="noRepeat" type="boolean" default="false">
+      Ensures the PIN contains enough unique digits (at least `min(length, 7)` distinct values). Prevents patterns like `111222`.
+    </ParamField>
+
+    <ParamField path="noSequential" type="boolean" default="true">
+      Rejects PINs that contain 3 consecutive digits with a constant difference of 0 or 1 (ascending or repeating), blocking runs like `123`, `234`, `000`.
+    </ParamField>
+
+    <ParamField path="noCommon" type="boolean" default="true">
+      Rejects PINs containing any of the 17 common 3-digit sub-patterns: `000`, `111`, `123`, `234`, `345`, `456`, `567`, `678`, `789`, `987`, `876`, `765`, `654`, `543`, `432`, `321`, `210`.
+    </ParamField>
+  </Tab>
+
+  <Tab title="Phonetic Shield">
+    <ParamField path="syllableCount" type="integer" default="3">
+      Number of syllable groups in the generated password. Range: 2–6. Each syllable is built from an onset consonant (or blend), a vowel pattern, and an optional coda consonant (or blend).
+    </ParamField>
+
+    <ParamField path="entropyLevel" type="string" default="medium">
+      Controls how much entropy is injected between syllables and at the end:
+      - `light` — 1 symbol from `!@#$%^&*_+-` between each syllable and at the end
+      - `medium` — 1 symbol + 1 digit (from `23456789`) in random order (recommended)
+      - `heavy` — symbol + digit + symbol for maximum entropy
+    </ParamField>
+
+    <ParamField path="capitalize" type="boolean" default="true">
+      Capitalizes the first letter of each syllable.
+    </ParamField>
+
+    <ParamField path="showGuide" type="boolean" default="true">
+      Displays a pronunciation guide below the output field showing the uppercase syllable components separated by `·` (e.g., `BRAY · FEND · GLEET`). Helps you memorize the password by speaking it aloud.
+    </ParamField>
+  </Tab>
+</Tabs>
+
+## Global settings
+
+### Theme
+
+KeyForge supports dark and light themes. Click the sun/moon icon in the top-right corner of the app to toggle. Your preference is stored in `localStorage['kf-theme']` — the only data KeyForge ever writes to browser storage.
+
+| Value | Description |
+|---|---|
+| `dark` | Dark background (default on dark-preferring OS) |
+| `light` | Light background (default on light-preferring OS) |
+
+### Keyboard shortcut
+
+| Shortcut | Action |
+|---|---|
+| `Ctrl+Enter` / `Cmd+Enter` | Regenerate a password for the currently active tab |
+| Click output field | Copy the generated value to clipboard |
+| Click copy icon (⧉) | Copy the generated value to clipboard |
+| Click refresh icon (↻) | Regenerate |

@@ -1,0 +1,137 @@
+---
+title: "Security model"
+description: "Understand what KeyForge protects against, where its trust boundaries lie, and how randomness flows from your operating system to your clipboard."
+---
+
+KeyForge is designed around a single threat model: an offline attacker who has obtained a copy of your password hash and is cracking it using a modern GPU cluster. Understanding what this means — and what it does not cover — is essential for using KeyForge appropriately.
+
+## Threat model
+
+KeyForge protects against:
+
+- **Offline brute-force attacks** — systematic enumeration of all possible passwords at rates of up to 10¹² guesses per second against raw hashes (MD5, SHA-1, SHA-256)
+- **Dictionary attacks** — wordlists of common passwords, names, dates, and dictionary words
+- **Rule-based pattern attacks** — cracking tools applying mutations like capitalizing the first letter, appending digits, or substituting `@` for `a`
+- **Weak-fragment attacks** — searching for known patterns such as `admin`, `pass`, `1234`, or `qwerty` embedded in longer passwords
+
+KeyForge does **not** protect against:
+
+- **Shoulder surfing** — someone watching your screen when the password is displayed
+- **Clipboard hijacking** — malware that reads your clipboard after you copy the password
+- **Keyloggers and browser malware** — software that intercepts the password before or after generation
+- **Browser vulnerabilities** — a compromised browser context can read any in-page JavaScript variable
+- **Weak storage** — if you store the generated password insecurely, KeyForge cannot help
+- **Phishing** — KeyForge generates passwords but cannot verify where you use them
+
+## Architecture
+
+All code runs entirely in your browser. There is no backend, no proxy, and no third-party service involved in generating your password.
+
+| Component | Location | Notes |
+|---|---|---|
+| `pasgen.js` | Browser | All generation algorithms: password, passphrase, PIN, Phonetic Shield |
+| `entropy.js` | Browser | Entropy calculation, strength levels, crack-time estimation, DNA rendering |
+| `ui.js` | Browser | DOM wiring, settings, theme management |
+| Server | None | No server exists |
+| Database | None | No data is sent anywhere |
+| Analytics | None | Zero telemetry |
+
+KeyForge has no npm dependencies and no external JavaScript libraries. The three JS files are the entire application logic.
+
+## Randomness source
+
+Every random decision in KeyForge — character selection, shuffle order, word selection, syllable construction, injected entropy — uses `crypto.getRandomValues()`:
+
+```javascript
+function cryptoRand(max) {
+  const buf = new Uint32Array(1);
+  crypto.getRandomValues(buf);
+  return buf[0] % max;
+}
+```
+
+`crypto.getRandomValues()` is defined in the [W3C Web Cryptography API](https://www.w3.org/TR/WebCryptoAPI/) specification and is available in all modern browsers. It draws entropy from the operating system's entropy pool — the same source used for TLS key generation and cryptographic operations. It is not seeded, not predictable, and has no relationship to `Math.random()`.
+
+<Info>
+  KeyForge has no `Math.random()` calls in any security-relevant path. The only use of `Math.random()` in the codebase is to vary the height of DNA visualization cells (8–13 px) — a purely cosmetic operation.
+</Info>
+
+## Fisher-Yates shuffle correctness
+
+After assembling the mandatory characters and filling remaining positions, KeyForge shuffles the result using Fisher-Yates:
+
+```javascript
+function fisherYates(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = cryptoRand(i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+```
+
+This implementation is correct for two reasons:
+
+1. **The swap range is `[0, i]` inclusive** — `cryptoRand(i + 1)` returns a value in `[0, i]`, which is the mathematically correct bound for an unbiased Fisher-Yates shuffle.
+2. **Every swap uses a fresh `crypto.getRandomValues()` call** — there is no seeded state to attack.
+
+A biased shuffle (for example, one using `Math.random()` with a fixed seed, or one that swaps into a narrower range) would create detectable correlations between character positions that could accelerate cracking.
+
+## Data flow
+
+<Steps>
+  <Step title="You click Generate">
+    The browser's click event fires in `ui.js`. Your settings are read from the DOM — character classes, length, enabled guards, and any custom exclusions.
+  </Step>
+  <Step title="The pool is assembled">
+    `buildPool` in `pasgen.js` filters the character sets according to your settings and the ambiguous-character exclusion list, producing a string of eligible characters.
+  </Step>
+  <Step title="Mandatory characters are selected">
+    The engine guarantees the minimum count for each enabled character class by selecting characters at random using `crypto.getRandomValues()`. Remaining positions are filled from the full pool, also using `crypto.getRandomValues()`.
+  </Step>
+  <Step title="The character array is shuffled">
+    `fisherYates` shuffles the assembled array using `crypto.getRandomValues()` for every swap, producing a uniformly random ordering.
+  </Step>
+  <Step title="Anti-pattern guards are applied">
+    The candidate password is tested against every enabled guard. If it fails, the engine discards it and restarts from step 3 (up to 200 times).
+  </Step>
+  <Step title="The password is displayed">
+    The accepted password is written to a read-only input field in the DOM. The entropy and crack-time estimates are calculated and displayed. The DNA visualization is rendered.
+  </Step>
+  <Step title="You copy the password">
+    You click the copy button. The password is written to the clipboard using the browser's Clipboard API. KeyForge does not log, transmit, or store the password at any point.
+  </Step>
+</Steps>
+
+## Storage policy
+
+KeyForge writes exactly one value to browser storage:
+
+| Key | Storage | Value | Purpose |
+|---|---|---|---|
+| `kf-theme` | `localStorage` | `"dark"` or `"light"` | Remembers your theme preference |
+
+No password, no setting, and no usage data is ever written to `localStorage`, `sessionStorage`, `IndexedDB`, cookies, or any other persistence mechanism. Clearing `localStorage` has no effect on KeyForge's ability to generate passwords — you simply revert to the default theme.
+
+## Using KeyForge offline
+
+<Info>
+  After the initial page load, KeyForge requires no network connection. All fonts load from Google Fonts on first visit, but the generation engine has no runtime network dependencies. You can save the page with its accompanying JS files and use it entirely offline.
+</Info>
+
+## Comparison with other approaches
+
+| Property | KeyForge | Server-side generator | `Math.random()`-based tool |
+|---|---|---|---|
+| Randomness source | `crypto.getRandomValues()` (OS entropy) | Server CSPRNG (varies) | Seeded PRNG — predictable |
+| Password leaves your device | Never | Yes — transmitted over network | Depends on implementation |
+| Works offline | Yes | No | Yes |
+| Anti-pattern guards | Yes | Rarely | Rarely |
+| Entropy calculation | Accurate, per-mode | Often absent | Often absent |
+| Dependencies | None | Various | Various |
+| Auditability | Read the source | Requires server access | Read the source |
+
+<Warning>
+  KeyForge's security guarantees depend on the integrity of your browser and operating system. A compromised browser extension, an injected content script, or OS-level malware can read any in-page value regardless of how carefully the generation code is written. Use KeyForge on a device you trust.
+</Warning>

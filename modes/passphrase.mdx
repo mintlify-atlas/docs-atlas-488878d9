@@ -1,0 +1,128 @@
+---
+title: "Passphrase generator"
+description: "Generate memorable, high-entropy passphrases from a 200-word curated wordlist with optional leet substitutions, digit suffix, and symbol suffix."
+keywords: ["passphrase", "wordlist", "EFF", "leet", "entropy", "memorable password"]
+---
+
+A passphrase is a sequence of random words joined by a separator. Unlike a traditional password, a passphrase draws its strength from the number of words and the size of the wordlist, not from visual complexity. The result is a credential you can actually read aloud and remember.
+
+## Why passphrases are strong
+
+Each word is chosen uniformly at random from a 200-word curated wordlist. An attacker who knows the exact wordlist and configuration still faces:
+
+```text
+5 words × log₂(200) ≈ 5 × 7.64 ≈ 38.2 bits base entropy
++ append 2-digit number: log₂(90)  ≈  6.5 bits
++ append symbol (7 options): log₂(7)   ≈  2.8 bits
+─────────────────────────────────────────
+≈ 47.5 bits total
+```
+
+Adding more words or enabling leet substitution increases entropy further. With leet enabled, partial substitutions break dictionary matching even against the known wordlist.
+
+<Note>
+Passphrases are best suited for master passwords, disk encryption keys, or any credential you must type or remember. For machine-generated tokens stored in a password manager, the password mode at 20+ characters usually produces higher entropy.
+</Note>
+
+## The 200-word wordlist
+
+KeyForge uses a 200-word EFF-inspired list of short, unambiguous English words. Every word is 3–4 characters, all lowercase, selected to avoid homophones and confusable spellings.
+
+Example words from the list: `able`, `acid`, `back`, `band`, `bold`, `bolt`, `cage` … `zoom`
+
+Each word contributes **≈ 7.64 bits** of entropy (`log₂(200)`).
+
+## Settings reference
+
+<ParamField path="options.wordCount" type="number" default="5">
+  Number of random words. Range: 3–10.
+</ParamField>
+
+<ParamField path="options.separator" type="string" default="-">
+  Character placed between words (and before the appended number). Available options:
+
+  | Value | Label |
+  |---|---|
+  | `-` | Dash |
+  | `.` | Dot |
+  | ` ` | Space |
+  | `_` | Underscore |
+  | `#` | Hash |
+  | `""` | None (words concatenated) |
+</ParamField>
+
+<ParamField path="options.capitalize" type="boolean" default="true">
+  Capitalise the first letter of each word (`able` → `Able`).
+</ParamField>
+
+<ParamField path="options.appendNum" type="boolean" default="true">
+  Append a random 2-digit number (10–99) after the last word, preceded by the separator. Adds ≈ 6.5 bits of entropy.
+</ParamField>
+
+<ParamField path="options.appendSym" type="boolean" default="true">
+  Append a random symbol from `!@#$%&*` (7 options) immediately after the number. Adds ≈ 2.8 bits of entropy.
+</ParamField>
+
+<ParamField path="options.useLeet" type="boolean" default="false">
+  Apply leet substitutions to every word before joining. See the substitution table below.
+</ParamField>
+
+## Leet substitution table
+
+When **Leet substitution** is enabled, each occurrence of the following letters is replaced:
+
+| Original | Replacement |
+|---|---|
+| `a` / `A` | `@` |
+| `e` / `E` | `3` |
+| `i` / `I` | `1` |
+| `o` / `O` | `0` |
+| `s` / `S` | `$` |
+| `t` / `T` | `7` |
+
+Substitutions are applied before capitalisation. A word like `east` becomes `3@$7`, and with capitalisation on it becomes `3@$7` (symbols are not re-capitalised).
+
+<Note>
+Leet substitution does not add measurable entropy to the calculation — an attacker aware of the leet map can enumerate all substitutions cheaply. Its value is defeating naive dictionary matching, not strengthening mathematical entropy.
+</Note>
+
+## Entropy calculation breakdown
+
+Entropy is computed by `calcPassphraseEntropy(wordCount, 200, hasNum, hasSym)`:
+
+```text
+entropy = wordCount × log₂(200)
+        + (appendNum ? log₂(90) : 0)
+        + (appendSym ? log₂(7)  : 0)
+```
+
+Full table for default settings (separator = dash, capitalize on, appendNum on, appendSym on):
+
+| Word count | Base (bits) | + Number | + Symbol | Total |
+|---|---|---|---|---|
+| 3 | 22.9 | 6.5 | 2.8 | 32.2 |
+| 4 | 30.6 | 6.5 | 2.8 | 39.9 |
+| 5 | 38.2 | 6.5 | 2.8 | 47.5 |
+| 6 | 45.9 | 6.5 | 2.8 | 55.2 |
+| 7 | 53.5 | 6.5 | 2.8 | 62.8 |
+| 8 | 61.1 | 6.5 | 2.8 | 70.4 |
+| 9 | 68.8 | 6.5 | 2.8 | 78.1 |
+| 10 | 76.4 | 6.5 | 2.8 | 85.7 |
+
+At 8 words with number and symbol, entropy reaches ≈ 70 bits — just inside the **Fair** tier.
+
+## Example passphrases
+
+```text
+# 5 words, dash separator, capitalize, number + symbol
+Bold-Farm-Silk-Crow-Rope-47!
+
+# 4 words, dot separator, no number, no symbol
+Bird.Cave.Foam.Grid
+
+# 5 words, no separator, leet substitution, capitalize
+B0ldF@rmS1lkCr0w47$
+
+# 6 words, space separator, lowercase, number + symbol
+camp cord dawn echo face farm 83@
+```

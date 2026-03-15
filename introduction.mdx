@@ -1,0 +1,82 @@
+---
+title: "Introduction"
+description: "KeyForge is a cryptographically secure, 100% client-side password generator with anti-bruteforce guards and unique Phonetic Shield mode."
+---
+
+KeyForge is a browser-based password generator that uses your device's cryptographically secure random number generator to produce passwords that are statistically impossible to predict.
+
+## The problem with most password generators
+
+Many online password generators rely on `Math.random()` — JavaScript's built-in pseudo-random number generator. `Math.random()` is designed for speed and statistical distribution, not security. Its output is seeded from a predictable source and can, in theory, be reverse-engineered by an attacker who observes enough output.
+
+<Note>
+  KeyForge uses `crypto.getRandomValues()` — the Web Cryptography API's CSPRNG (cryptographically secure pseudo-random number generator). This is the same primitive used by TLS handshakes and cryptographic key generation. Every character selection and every shuffle is driven by `crypto.getRandomValues()`, with no fallback to `Math.random()`.
+</Note>
+
+After sampling the random bytes, KeyForge shuffles the character pool using a Fisher-Yates algorithm also driven by `crypto.getRandomValues()`. This guarantees that the final order of characters is as unpredictable as the characters themselves.
+
+## Key features
+
+<CardGroup cols={2}>
+  <Card title="CSPRNG everywhere" icon="shield-halved">
+    Every character and every shuffle uses `crypto.getRandomValues()`. No `Math.random()` is involved at any stage of generation.
+  </Card>
+  <Card title="Anti-bruteforce guards" icon="ban">
+    Optional rules block keyboard walks (e.g. `qwerty`), sequential character runs (e.g. `abcd`), consecutive repeats, and known weak fragments such as `pass`, `admin`, and `1234`.
+  </Card>
+  <Card title="Entropy DNA visualization" icon="dna">
+    A color-coded bar beneath each output shows the character-class composition of your password at a glance — uppercase, lowercase, digit, and symbol segments each rendered in a distinct color.
+  </Card>
+  <Card title="Strength meter and crack time" icon="gauge-high">
+    The strength meter calculates true Shannon entropy (in bits) and converts it to an estimated crack time assuming an offline attacker running 1 trillion guesses per second — a modern GPU farm attacking raw MD5 or SHA hashes.
+  </Card>
+  <Card title="Four generator modes" icon="sliders">
+    Choose between Password, Passphrase, PIN, and the unique Phonetic Shield mode depending on your use case and memorability requirements.
+  </Card>
+  <Card title="Phonetic Shield" icon="ear-listen">
+    A mode exclusive to KeyForge. Passwords are built from pronounceable syllable groups with high-entropy characters injected between them, producing output you can actually say aloud while remaining resistant to dictionary and bruteforce attacks.
+  </Card>
+  <Card title="Fully customizable" icon="sliders-h">
+    Fine-tune character classes, minimum counts per class, custom symbol pools, forced-include and forced-exclude character lists, word count, separators, leet substitution, syllable count, and entropy injection level.
+  </Card>
+  <Card title="Dark and light theme" icon="moon">
+    Toggle between dark and light mode. Your preference is stored in `localStorage` — the only data KeyForge ever writes to your browser.
+  </Card>
+</CardGroup>
+
+## How KeyForge differs from typical generators
+
+Most password generators make two decisions: which characters to include, and how many. KeyForge adds a third layer — it actively tests each candidate password against a set of anti-pattern rules before accepting it:
+
+- **Keyboard walk detection** scans the output against all standard QWERTY keyboard rows, forward and backward.
+- **Sequential character detection** rejects runs of consecutive ASCII code points in either direction.
+- **Weak fragment matching** checks against a curated list of dictionary fragments and common sequences (e.g. `hello`, `secre`, `qwer`).
+- **Consecutive repeat detection** optionally rejects any character that appears twice in a row.
+
+If a generated candidate fails any enabled rule, the engine discards it and generates a new one, up to 200 attempts. This means you always receive a password that passes every guard you have enabled.
+
+The Passphrase mode draws from a 200-word curated EFF-style wordlist. The Phonetic Shield mode assembles passwords from onset–vowel–coda syllable structures, interleaving entropy characters between syllable groups and appending additional entropy at the end to satisfy common policy requirements.
+
+## Architecture
+
+KeyForge is a single HTML file with three accompanying JavaScript modules:
+
+| File | Responsibility |
+|---|---|
+| `pasgen.js` | Core generation engine: password, passphrase, PIN, and Phonetic Shield algorithms |
+| `entropy.js` | Entropy calculation, crack-time estimation, strength levels, and DNA rendering |
+| `ui.js` | DOM event wiring, settings reads, live regeneration on setting change, theme management |
+
+<Info>
+  KeyForge has no backend, no API calls, and no analytics. Every computation runs entirely in your browser. The only data written outside of memory is your theme preference, stored under the key `kf-theme` in `localStorage`. Your generated passwords never leave your device.
+</Info>
+
+Because there is no server involved, KeyForge works offline after the initial page load. You can save the page locally or use it directly at [https://keyforgegd.vercel.app](https://keyforgegd.vercel.app).
+
+## Next steps
+
+Ready to generate your first password? The quickstart walks you through each step in under a minute.
+
+<Card title="Quick start" icon="rocket" href="/quickstart">
+  Generate your first cryptographically secure password with KeyForge.
+</Card>

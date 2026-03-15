@@ -1,0 +1,194 @@
+---
+title: "Password entropy"
+description: "Understand how KeyForge measures password unpredictability in bits, how strength tiers are assigned, and how crack-time estimates are calculated."
+---
+
+Entropy is the measure of unpredictability in a password. The higher the entropy, the more guesses an attacker needs to try before finding your password. KeyForge expresses entropy in **bits** — each additional bit doubles the size of the search space an attacker must exhaust.
+
+## The Shannon entropy formula
+
+For a randomly generated password, entropy follows the Shannon formula:
+
+```
+H = L × log₂(N)
+```
+
+Where:
+- **H** is the entropy in bits
+- **L** is the password length (number of characters)
+- **N** is the pool size (number of distinct characters available at each position)
+
+In code, KeyForge implements this as:
+
+```javascript
+function calcPasswordEntropy(length, poolSize) {
+  if (length <= 0 || poolSize <= 1) return 0;
+  return length * Math.log2(poolSize);
+}
+```
+
+Every character you add multiplies the search space by the pool size, which is why length has a larger impact on entropy than most people expect.
+
+## How the pool size is calculated
+
+The pool size is the count of characters available at each position after applying your settings. KeyForge computes it in `getPoolSize`:
+
+```javascript
+function getPoolSize(options = {}) {
+  const excluded = new Set(customExclude ? customExclude.split('') : []);
+  if (excludeAmbiguous) {
+    ['0','O','o','l','1','I','|','`',"'",'"','\\'].forEach(c => excluded.add(c));
+  }
+
+  let pool = 0;
+  if (useLower)   pool += 'abcdefghijklmnopqrstuvwxyz'.split('').filter(c => !excluded.has(c)).length;
+  if (useUpper)   pool += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').filter(c => !excluded.has(c)).length;
+  if (useDigits)  pool += '0123456789'.split('').filter(c => !excluded.has(c)).length;
+  if (useSymbols) pool += symbolSet.split('').filter(c => !excluded.has(c)).length;
+
+  return Math.max(2, pool);
+}
+```
+
+When **Exclude ambiguous characters** is on, the 11 characters `0 O o l 1 I | \` ` ' "` are removed from whichever class they belong to before the pool is counted.
+
+### Pool size vs. entropy at 16 characters
+
+| Character classes enabled | Ambiguous excluded | Pool size | Entropy |
+|---|---|---|---|
+| Lowercase only | No | 26 | 75.2 bits |
+| Lower + Upper | No | 52 | 90.7 bits |
+| Lower + Upper + Digits | No | 62 | 95.3 bits |
+| Lower + Upper + Digits + Symbols | No | 90 | 103.9 bits |
+| Lower + Upper + Digits + Symbols | Yes | 79 | 101.1 bits |
+
+### Worked example
+
+A 16-character password with all four character classes enabled and no exclusions:
+
+- Lowercase: 26 characters
+- Uppercase: 26 characters  
+- Digits: 10 characters
+- Symbols (`!@#$%^&*()_+-=[]{}|;:,.<>?/~`): 28 characters
+- **Pool size: 90**
+
+```
+H = 16 × log₂(90) = 16 × 6.492 = 103.9 bits
+```
+
+That places the password firmly in the **Very Strong** tier.
+
+## Entropy for other generator modes
+
+<Tabs>
+  <Tab title="Passphrase">
+    Passphrase entropy accounts for word selection plus optional number and symbol injection:
+
+    ```javascript
+    function calcPassphraseEntropy(wordCount, wordListSize = 200, hasNum = true, hasSym = true) {
+      let entropy = wordCount * Math.log2(wordListSize);
+      if (hasNum) entropy += Math.log2(90);   // 2-digit number (10–99)
+      if (hasSym) entropy += Math.log2(7);    // symbol from pool of 7
+      return entropy;
+    }
+    ```
+
+    With 5 words, a number, and a symbol: `5 × log₂(200) + log₂(90) + log₂(7) ≈ 44.8 bits`.
+  </Tab>
+  <Tab title="PIN">
+    A PIN draws from a pool of 10 digits:
+
+    ```javascript
+    function calcPinEntropy(length) {
+      return length * Math.log2(10);
+    }
+    ```
+
+    A 6-digit PIN: `6 × log₂(10) ≈ 19.9 bits` — fine for rate-limited online systems, not for offline scenarios.
+  </Tab>
+  <Tab title="Phonetic Shield">
+    Phonetic entropy accounts for syllable structure and injected entropy characters:
+
+    ```javascript
+    function calcPhoneticEntropy(syllableCount, entropyLevel) {
+      const sylSpace = 39 * 10 * 17 + 39 * 10; // ~7020 syllable combinations
+      let entropy = syllableCount * Math.log2(sylSpace);
+      const injectedChars = { light: 1, medium: 2, heavy: 3 }[entropyLevel] || 2;
+      const injections = syllableCount - 1 + 1; // between syllables + end
+      const symPool = 11;
+      const digPool = 8;
+      entropy += injections * injectedChars * Math.log2(symPool + digPool);
+      return entropy;
+    }
+    ```
+
+    The syllable space combines 39 onsets, 10 vowels, 17 codas, plus onset+vowel-only variants.
+  </Tab>
+</Tabs>
+
+## Strength tiers
+
+KeyForge maps entropy to one of six strength levels:
+
+| Tier | Bit range | What it means |
+|---|---|---|
+| Very Weak | 0–35 bits | Crackable in under a second offline |
+| Weak | 36–55 bits | Falls within minutes to hours |
+| Fair | 56–72 bits | Resistant to casual attacks; adequate for low-risk accounts |
+| Strong | 73–94 bits | Practical offline attack would take years |
+| Very Strong | 95–127 bits | Millions of years at 1 trillion guesses/sec |
+| Fortress | 128+ bits | Computationally infeasible by any known attack |
+
+These thresholds are defined in `STRENGTH_LEVELS` in `entropy.js`.
+
+## Crack time estimation
+
+KeyForge converts entropy to an estimated crack time using a conservative **offline attacker model**:
+
+```javascript
+// Assumes offline attack: 1 trillion guesses/sec (modern GPU farm, raw MD5/SHA)
+function getCrackTime(entropyBits) {
+  const GPS  = 1e12; // guesses per second
+  // Average-case: half the keyspace
+  const secs = Math.pow(2, entropyBits - 1) / GPS;
+  ...
+}
+```
+
+The key assumptions:
+- **Rate**: 10¹² (1 trillion) guesses per second — representing a modern GPU farm cracking raw MD5 or SHA hashes
+- **Average case**: an attacker finds the password after testing half the keyspace, so `2^(bits−1)` guesses on average
+
+### Crack time scale
+
+| Entropy | Crack time estimate |
+|---|---|
+| 20 bits | < 1 ms |
+| 30 bits | ~1 sec |
+| 40 bits | ~18 min |
+| 50 bits | ~13 days |
+| 60 bits | ~36 years |
+| 72 bits | ~149K years |
+| 80 bits | ~38M years |
+| 94 bits | ~247B years |
+| 103 bits | ~253T years |
+| 128 bits | ∞ (heat death of universe) |
+
+<Note>
+  These estimates assume the attacker is cracking a **fast, unsalted hash** (MD5, SHA-1, raw SHA-256). Against a properly hashed password using bcrypt, scrypt, or Argon2, the same entropy buys orders of magnitude more protection — because modern adaptive hashing functions intentionally slow every guess to milliseconds.
+</Note>
+
+## The entropy DNA visualization
+
+Below each generated password, KeyForge renders a color-coded bar called the **entropy DNA**. Each character in the password becomes one cell in the bar, colored by its character class:
+
+| Color | CSS variable | Character class |
+|---|---|---|
+| Coral | `--dna-upper` | Uppercase (A–Z) |
+| Silver | `--dna-lower` | Lowercase (a–z) |
+| Cyan | `--dna-digit` | Digit (0–9) |
+| Gold | `--dna-symbol` | Symbol |
+
+Cell heights vary slightly (8–13 px) for visual texture. The variation is cosmetic — it uses `Math.random()` only for the height offset, not for any cryptographic purpose.
+
+The DNA bar lets you see at a glance whether your password has a good mix of character classes. A bar dominated by a single color signals that only one class is contributing to the pool — a potential reason to enable additional character types.

@@ -1,97 +1,89 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "KeyForge"
+description: "Cryptographically secure password generator with anti-bruteforce guards, entropy DNA visualization, and Phonetic Shield mode. 100% local — zero telemetry."
 ---
 
-## Setting up
-
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Get started" icon="rocket" href="/introduction">
+    Learn what KeyForge is and how it keeps your passwords secure.
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Quick start" icon="bolt" href="/quickstart">
+    Open KeyForge and generate your first secure password in seconds.
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Generator modes" icon="sliders" href="/modes/password">
+    Explore Password, Passphrase, PIN, and Phonetic Shield modes.
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="How entropy works" icon="shield-halved" href="/concepts/entropy">
+    Understand the math behind password strength and crack-time estimates.
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## Why KeyForge?
 
-Everything you need to create world-class documentation.
+Most password generators rely on `Math.random()` — a pseudo-random function that is **not cryptographically secure**. KeyForge uses `crypto.getRandomValues()`, the same source of entropy used by TLS and other security-critical systems. Every character is drawn from a true CSPRNG (Cryptographically Secure Pseudo-Random Number Generator).
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
+<CardGroup cols={3}>
+  <Card title="100% client-side" icon="lock">
+    Passwords are generated entirely in your browser. Nothing is ever sent to a server.
   </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
+  <Card title="Zero telemetry" icon="eye-slash">
+    No analytics, no cookies, no tracking. Your generated passwords stay on your device.
   </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
+  <Card title="Anti-bruteforce guards" icon="shield">
+    Built-in rules block keyboard walks, sequential characters, and weak dictionary fragments.
   </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
+  <Card title="Entropy DNA" icon="dna">
+    A visual bar shows the character-class composition of every generated password at a glance.
   </Card>
-</Columns>
+  <Card title="Crack-time estimates" icon="clock">
+    See how long a 1-trillion-guess-per-second GPU farm would need to crack your password.
+  </Card>
+  <Card title="Phonetic Shield" icon="microphone">
+    Pronounceable syllable groups with injected entropy — memorable yet resistant to all attacks.
+  </Card>
+</CardGroup>
 
-## Need inspiration?
+## Four generator modes
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<Tabs>
+  <Tab title="Password">
+    Generate a classic random password with full control over length (8–128 characters), character classes, minimum per-class counts, custom symbol pools, and four anti-bruteforce guards.
+
+    **Key settings:** length slider, uppercase/lowercase/digits/symbols toggles, exclude ambiguous characters, block keyboard walks, block weak fragments, custom exclude/include characters.
+  </Tab>
+  <Tab title="Passphrase">
+    Build a passphrase from a curated 200-word EFF-inspired wordlist. Words are joined by a separator of your choice and optionally augmented with a 2-digit number, a symbol, and leet substitutions (a→@, e→3).
+
+    **Key settings:** word count (3–10), separator (dash, dot, space, underscore, hash, none), capitalize, append number, append symbol, leet substitution.
+  </Tab>
+  <Tab title="PIN">
+    Generate a numeric PIN with configurable length (4–20 digits) and security rules that block repeating digits, sequential runs (1234, 9876), and common PIN patterns.
+
+    **Key settings:** PIN length slider, no-repeat digits, block sequences, block common patterns.
+  </Tab>
+  <Tab title="Phonetic Shield">
+    Build passwords from pronounceable syllable groups (onset + vowel + optional coda) with entropy characters injected between them. A pronunciation guide helps you memorize the result.
+
+    **Key settings:** syllable groups (2–6), entropy injection level (light / medium / heavy), capitalize syllables, show pronunciation guide.
+  </Tab>
+</Tabs>
+
+## Security at a glance
+
+| Property | Value |
+|---|---|
+| Randomness source | `crypto.getRandomValues()` (CSPRNG) |
+| Shuffle algorithm | Fisher-Yates with CSPRNG |
+| Max password length | 128 characters |
+| Threat model baseline | 1 trillion guesses/second (offline GPU farm, raw hash) |
+| Data collection | None |
+| Server requests | None — fully offline after page load |
+| Storage | `localStorage` for theme preference only |
+
+<Note>
+  KeyForge estimates crack times against an **offline** attacker using raw MD5/SHA at 10¹² guesses per second. Against properly hashed credentials (bcrypt, Argon2), the real times are orders of magnitude longer.
+</Note>
+
+## Open source
+
+KeyForge is open source. View the full source code, report issues, or contribute on [GitHub](https://github.com/Gosiverua/keyforgegd).

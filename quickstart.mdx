@@ -1,80 +1,161 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: "Quick start"
+description: "Generate your first cryptographically secure password with KeyForge in under a minute."
 ---
 
-## Get started in three steps
-
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
-
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  KeyForge runs 100% locally in your browser. No account is required, nothing is transmitted to any server, and your generated passwords are never stored anywhere outside your own device.
 </Note>
+
+<Steps>
+  <Step title="Open KeyForge">
+    Navigate to [https://keyforgegd.vercel.app](https://keyforgegd.vercel.app) in any modern browser.
+
+    The app loads immediately and generates a password in each of the four modes as soon as the page is ready. You do not need to click anything to see your first result.
+  </Step>
+
+  <Step title="Choose a generator mode">
+    Select the tab that matches your use case.
+
+    <Tabs>
+      <Tab title="Password">
+        Generates a fixed-length random string drawn from any combination of uppercase letters, lowercase letters, digits, and symbols. Best for:
+        - Application and website logins
+        - Any service that requires a specific length or character set
+        - Maximum entropy in the fewest characters
+
+        Default length is 16 characters with all four character classes enabled.
+      </Tab>
+      <Tab title="Passphrase">
+        Combines random words from a curated 200-word list, separated by a character of your choice, with an optional appended number and symbol. Best for:
+        - Master passwords you need to remember and type
+        - Disk encryption keys
+        - Situations where human readability matters
+
+        Default is 5 words with a dash separator, a 2-digit number, and a symbol appended.
+      </Tab>
+      <Tab title="PIN">
+        Generates a numeric-only PIN of 4–20 digits, with optional rules to block repeated digits, sequential runs (e.g. `1234`), and common 3-digit patterns. Best for:
+        - Device PINs
+        - Banking and payment codes
+        - Any numeric-only field
+
+        Default is 6 digits with sequential and common-pattern blocking enabled.
+      </Tab>
+      <Tab title="Phonetic Shield">
+        Builds passwords from pronounceable consonant–vowel–consonant syllable groups with entropy characters injected between each syllable. A pronunciation guide appears below the output showing each syllable in uppercase, separated by dots.
+
+        Best for:
+        - Passwords you occasionally need to read aloud or type from memory
+        - Shared credentials communicated verbally
+        - Balancing memorability with strong entropy
+
+        Default is 3 syllable groups with medium entropy injection (one symbol and one digit between each group).
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Configure your settings">
+    Each mode exposes controls relevant to that generator. Passwords regenerate automatically whenever you change a setting — you do not need to click **Generate** after each adjustment.
+
+    **Password mode settings**
+
+    | Setting | What it does |
+    |---|---|
+    | Length slider | Sets character count from 8 to 128. Default: 16. |
+    | Character classes | Toggles uppercase A–Z, lowercase a–z, digits 0–9, and symbols independently. |
+    | Exclude ambiguous | Removes visually similar characters: `0 O o l 1 I \| \` ' " \\` |
+    | Block keyboard walks | Rejects passwords containing QWERTY row sequences of 3+ characters (e.g. `qwe`, `asd`). |
+    | No consecutive repeats | Rejects passwords where the same character appears twice in a row. |
+    | Block weak fragments | Rejects passwords containing dictionary-adjacent fragments such as `pass`, `admin`, `qwer`, or `1234`. |
+    | Minimum character counts | Guarantees at least N characters of each enabled class appear in the output. Expand the collapsible section to set per-class minimums. |
+    | Custom character sets | Override the default symbol pool, exclude specific characters, or force-include specific characters. Expand the collapsible section to access these fields. |
+
+    **Passphrase mode settings**
+
+    | Setting | What it does |
+    |---|---|
+    | Word count slider | Sets the number of words from 3 to 10. |
+    | Separator | Choose dash, dot, space, underscore, hash, or no separator between words. |
+    | Capitalize words | Uppercases the first letter of each word. |
+    | Append 2-digit number | Appends a random 2-digit number (10–99) after the last word. |
+    | Append symbol | Appends a random symbol from `!@#$%&*`. |
+    | Leet substitution | Replaces `a→@`, `e→3`, `i→1`, `o→0`, `s→$`, `t→7` across all words. |
+
+    **PIN mode settings**
+
+    | Setting | What it does |
+    |---|---|
+    | PIN length slider | Sets digit count from 4 to 20. |
+    | No repeating digits | Ensures at least 7 unique digits appear in the output. |
+    | Block sequences | Rejects PINs containing runs like `123`, `987`, or `000`. |
+    | Block common patterns | Rejects PINs containing any of 17 known 3-digit common patterns. |
+
+    **Phonetic Shield settings**
+
+    | Setting | What it does |
+    |---|---|
+    | Syllable groups slider | Sets the number of syllable groups from 2 to 6. |
+    | Light entropy injection | Inserts 1 symbol character between each syllable group. |
+    | Medium entropy injection | Inserts 1 symbol and 1 digit between each syllable group (recommended). |
+    | Heavy entropy injection | Inserts 3 entropy characters between each syllable group for maximum entropy. |
+    | Capitalize syllables | Uppercases the first letter of each syllable. |
+    | Show pronunciation guide | Displays the syllables in uppercase below the output field (e.g. `BLU · STENT · DROO`). |
+  </Step>
+
+  <Step title="Generate and copy your password">
+    Click the **Generate** button for your chosen mode, or use the keyboard shortcut.
+
+    <Tip>
+      Press **Ctrl+Enter** (or **Cmd+Enter** on macOS) at any time to regenerate a new password in the currently active tab. This is the fastest way to iterate through candidates until you find one that suits your needs.
+    </Tip>
+
+    To copy the generated output:
+    - Click the **⧉** icon to the right of the output field, or
+    - Click directly on the output field itself.
+
+    A toast notification confirms the copy. The copy button briefly displays a checkmark to confirm the operation succeeded.
+  </Step>
+
+  <Step title="Understand your results">
+    Below the output field, KeyForge displays three pieces of information that tell you exactly how strong your password is.
+
+    **Entropy DNA bar**
+
+    A row of colored segments — one per character — where each color represents a character class:
+
+    | Color | Class |
+    |---|---|
+    | Coral / red | Uppercase letter |
+    | Silver / gray | Lowercase letter |
+    | Cyan / blue | Digit |
+    | Gold / yellow | Symbol |
+
+    A visually diverse bar (many different colors with no long runs of a single color) is a good indicator that your character classes are well mixed and that anti-pattern guards are working.
+
+    **Entropy bits**
+
+    The number displayed in bits is calculated as:
+
+    ```text
+    entropy = length × log₂(pool_size)
+    ```
+
+    where `pool_size` is the total number of distinct characters available after applying your exclusion settings. Higher bits means a larger search space for an attacker.
+
+    **Strength label and crack time**
+
+    The strength label maps entropy ranges to human-readable tiers:
+
+    | Label | Entropy range |
+    |---|---|
+    | Very Weak | 0–35 bits |
+    | Weak | 36–55 bits |
+    | Fair | 56–72 bits |
+    | Strong | 73–94 bits |
+    | Very Strong | 95–127 bits |
+    | Fortress | 128+ bits |
+
+    The crack time estimate assumes an offline attacker with access to the raw hash, running at **1 trillion guesses per second** (a realistic figure for a GPU farm attacking MD5 or SHA-1). Real-world times for properly hashed credentials (bcrypt, Argon2) are orders of magnitude longer.
+  </Step>
+</Steps>

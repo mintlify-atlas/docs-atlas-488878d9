@@ -1,0 +1,89 @@
+---
+title: "PIN generator"
+description: "Generate cryptographically secure numeric PINs with configurable length and optional guards against repeating digits, sequential runs, and common patterns."
+keywords: ["PIN", "numeric", "generator", "CSPRNG", "entropy", "security"]
+---
+
+The PIN generator produces numeric-only codes using the browser's `crypto.getRandomValues()` CSPRNG — the same source used by the password mode. All generation happens locally; no network requests are made.
+
+## When to use PINs
+
+Use the PIN mode when the target system only accepts digits — ATM PINs, phone unlock codes, door-entry keypads, and some banking apps. For anything that accepts alphanumeric input, the password or passphrase modes offer substantially higher entropy per character.
+
+<Warning>
+A 6-digit PIN provides only ≈ 19.9 bits of entropy. Against an offline brute-force attack at 1 trillion guesses/second, the full keyspace is exhausted in under 1 millisecond. Always pair PINs with hardware lockouts, account throttling, or HSM-backed verification that limits guess rates.
+</Warning>
+
+## Settings reference
+
+<ParamField path="options.length" type="number" default="6">
+  Number of digits in the PIN. Range: 4–20.
+</ParamField>
+
+<ParamField path="options.noRepeat" type="boolean" default="false">
+  Ensure enough unique digits appear. The check requires at least `min(length, 7)` distinct digits, preventing patterns like `1111` or `1212` with low variety.
+</ParamField>
+
+<ParamField path="options.noSequential" type="boolean" default="true">
+  Block any PIN containing 3 or more consecutive digits where the absolute difference between each adjacent pair is ≤ 1. This catches ascending runs (`123`, `456`, `789`), descending runs (`987`, `654`, `321`), and repeated-digit triples (`111`, `222`).
+</ParamField>
+
+<ParamField path="options.noCommon" type="boolean" default="true">
+  Block any PIN that contains a known common 3-digit pattern as a substring anywhere in the result.
+</ParamField>
+
+## How sequential detection works
+
+For every window of 3 consecutive digits at positions `i`, `i+1`, `i+2`, the generator computes:
+
+```text
+diff1 = digit[i+1] − digit[i]
+diff2 = digit[i+2] − digit[i+1]
+
+if diff1 === diff2 and |diff1| ≤ 1  →  sequential (rejected)
+```
+
+This catches `123` (diff = 1, 1), `321` (diff = −1, −1), and `000` / `111` (diff = 0, 0).
+
+## Blocked common patterns
+
+The following 3-digit sequences are blocked as substrings anywhere in the generated PIN when **Block common patterns** is enabled:
+
+```text
+000  111  123  234  345  456  567  678  789
+987  876  765  654  543  432  321  210
+```
+
+A PIN of any length is rejected if any of these appear at any position. For example, `47123` is rejected because it contains `123` at positions 2–4.
+
+## Entropy table
+
+PIN entropy is calculated as `length × log₂(10)`:
+
+| Length | Entropy (bits) | Strength tier |
+|---|---|---|
+| 4 | 13.3 | Very Weak |
+| 5 | 16.6 | Very Weak |
+| 6 | 19.9 | Very Weak |
+| 7 | 23.3 | Very Weak |
+| 8 | 26.6 | Very Weak |
+| 10 | 33.2 | Very Weak |
+| 12 | 39.9 | Weak |
+| 14 | 46.5 | Weak |
+| 16 | 53.2 | Weak |
+| 18 | 59.8 | Fair |
+| 20 | 66.4 | Fair |
+
+<Note>
+These entropy values assume the full 10-digit symbol space. Enabling guards like **Block sequences** or **No repeating digits** does not reduce entropy in the calculation — it only filters candidates, slightly biasing the distribution away from weak patterns at no meaningful cost to theoretical entropy.
+</Note>
+
+## Tips
+
+<Tip>
+If you need a PIN for a system that allows 8 or more digits, use 8+ digits with sequences and common patterns blocked. At 12 digits you cross into Weak territory (≈ 40 bits), which is sufficient for rate-limited systems.
+</Tip>
+
+<Tip>
+For shared door or alarm codes that multiple people must memorise, consider using the Phonetic Shield mode instead. It generates pronounceable passwords that are easier to communicate verbally.
+</Tip>
